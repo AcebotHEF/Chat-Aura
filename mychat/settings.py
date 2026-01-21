@@ -31,14 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',                  # Daphne for ASGI support
+    'daphne', # <--- Must be first
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',
+    'django.contrib.contenttypes', # <--- This was likely missing!
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'chat',                    # Your chat app
+    'chat',   # <--- Your chat app
 ]
 
 
@@ -70,7 +70,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mychat.wsgi.application'
-ASGI_APPLICATION = 'mychat.asgi.application'
 
 
 # Database
@@ -119,6 +118,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# mychat/settings.py
+
+# ... (End of file) ...
+
+ASGI_APPLICATION = 'mychat.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
