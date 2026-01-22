@@ -5,39 +5,57 @@
     <style>
         body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; background-color: #e5ddd5; }
         
-        /* SIDEBAR */
+        /* --- SIDEBAR --- */
         #sidebar { width: 30%; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #ddd; font-weight: bold; }
+        .sidebar-header { padding: 20px; background: #f0f2f5; border-bottom: 1px solid #ddd; font-weight: bold; font-size: 18px; }
+        
         .user-list { flex: 1; overflow-y: auto; }
-        .user-item { padding: 15px; border-bottom: 1px solid #f0f2f5; cursor: pointer; display: flex; align-items: center; text-decoration: none; color: black; }
+        .user-item { padding: 15px; border-bottom: 1px solid #f0f2f5; cursor: pointer; display: flex; align-items: center; text-decoration: none; color: black; transition: background 0.2s; }
         .user-item:hover { background: #f5f6f6; }
-        .user-avatar { width: 40px; height: 40px; background: #ddd; border-radius: 50%; margin-right: 15px; }
         
-        /* CHAT AREA */
+        /* Avatar Image Style */
+        .user-avatar { 
+            width: 45px; 
+            height: 45px; 
+            border-radius: 50%; 
+            margin-right: 15px; 
+            background-color: #ddd;
+        }
+        
+        /* --- CHAT AREA --- */
         #chat-area { width: 70%; display: flex; flex-direction: column; background: #efe7dd; }
-        .chat-header { padding: 15px; background: #f0f2f5; border-bottom: 1px solid #ddd; display: flex; align-items: center; }
         
+        /* Header */
+        .chat-header { padding: 15px; background: #f0f2f5; border-bottom: 1px solid #ddd; display: flex; align-items: center; }
+        .chat-header h3 { margin: 0; font-size: 16px; }
+        
+        /* Messages Log */
         #chat-log { flex: 1; padding: 20px; overflow-y: scroll; display: flex; flex-direction: column; gap: 10px; }
         
         /* Message Bubbles */
-        .message { padding: 10px 15px; border-radius: 7px; max-width: 60%; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
-        .sent { background: #d9fdd3; align-self: flex-end; }
-        .received { background: white; align-self: flex-start; }
+        .message { padding: 10px 15px; border-radius: 7px; max-width: 60%; font-size: 14px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); line-height: 1.4; }
+        .sent { background: #d9fdd3; align-self: flex-end; border-top-right-radius: 0; } /* Green (Me) */
+        .received { background: white; align-self: flex-start; border-top-left-radius: 0; } /* White (Them) */
 
-        #input-area { padding: 15px; background: #f0f2f5; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; outline: none; }
-        button { padding: 10px 20px; border-radius: 20px; border: none; background: #0084ff; color: white; cursor: pointer; }
+        /* Input Area */
+        #input-area { padding: 15px; background: #f0f2f5; display: flex; gap: 10px; align-items: center; }
+        input { flex: 1; padding: 12px; border-radius: 20px; border: none; outline: none; font-size: 15px; }
+        button { padding: 10px 20px; border-radius: 20px; border: none; background: #0084ff; color: white; cursor: pointer; font-weight: bold; }
+        button:hover { background: #006bcf; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <div class="sidebar-header">Chats</div>
+        <div class="sidebar-header">My Chats</div>
         <div class="user-list">
             {% for user in users %}
                 <a href="{% url 'chat_room' user.id %}" class="user-item">
-                    <div class="user-avatar"></div>
-                    <div>{{ user.username }}</div>
+                    <img src="https://api.dicebear.com/9.x/avataaars/svg?seed={{ user.username }}" class="user-avatar">
+                    <div>
+                        <div style="font-weight: bold;">{{ user.username }}</div>
+                        <div style="font-size: 12px; color: gray;">Click to chat</div>
+                    </div>
                 </a>
             {% endfor %}
         </div>
@@ -46,7 +64,7 @@
     <div id="chat-area">
         {% if other_user %}
             <div class="chat-header">
-                <div class="user-avatar"></div>
+                <img src="https://api.dicebear.com/9.x/avataaars/svg?seed={{ other_user.username }}" class="user-avatar">
                 <h3>{{ other_user.username }}</h3>
             </div>
 
@@ -64,8 +82,9 @@
             </div>
         {% else %}
             <div style="display:flex; align-items:center; justify-content:center; height:100%; flex-direction: column; color: #777;">
+                <img src="https://api.dicebear.com/9.x/avataaars/svg?seed={{ request.user.username }}" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 20px;">
                 <h1>Welcome, {{ request.user.username }}</h1>
-                <p>Select a chat from the sidebar to start messaging.</p>
+                <p>Select a bot or user from the sidebar to start chatting.</p>
             </div>
         {% endif %}
     </div>
@@ -76,21 +95,29 @@
         {{ other_user.id|json_script:"other-user-id" }}
 
         <script>
+            // 1. Setup Variables
             const roomName = JSON.parse(document.getElementById('room-name').textContent);
             const myUsername = JSON.parse(document.getElementById('my-username').textContent);
             const otherUserId = JSON.parse(document.getElementById('other-user-id').textContent);
 
+            // 2. Connect to WebSocket
             const chatSocket = new WebSocket(
                 'ws://' + window.location.host + '/ws/chat/' + roomName + '/'
             );
 
+            // 3. Auto-scroll Function
             const chatLog = document.querySelector('#chat-log');
-            chatLog.scrollTop = chatLog.scrollHeight;
+            function scrollToBottom() {
+                chatLog.scrollTop = chatLog.scrollHeight;
+            }
+            scrollToBottom(); // Scroll on load
 
+            // 4. Handle Incoming Messages
             chatSocket.onmessage = function(e) {
                 const data = JSON.parse(e.data);
                 const messageElement = document.createElement('div');
                 
+                // Style bubble based on sender
                 if (data.sender === myUsername) {
                     messageElement.classList.add('message', 'sent');
                 } else {
@@ -99,12 +126,14 @@
                 
                 messageElement.innerText = data.message;
                 chatLog.appendChild(messageElement);
-                chatLog.scrollTop = chatLog.scrollHeight;
+                scrollToBottom(); // Scroll on new message
             };
 
+            // 5. Handle Sending Messages
             document.querySelector('#chat-message-submit').onclick = function(e) {
                 const messageInputDom = document.querySelector('#chat-message-input');
                 const message = messageInputDom.value;
+                
                 if(message.trim() !== "") {
                     chatSocket.send(JSON.stringify({
                         'message': message,
@@ -115,8 +144,15 @@
                 }
             };
 
+            // Allow "Enter" key to send
             document.querySelector('#chat-message-input').onkeyup = function(e) {
-                if (e.keyCode === 13) document.querySelector('#chat-message-submit').click();
+                if (e.keyCode === 13) {
+                    document.querySelector('#chat-message-submit').click();
+                }
+            };
+
+            chatSocket.onclose = function(e) {
+                console.error('Chat socket closed unexpectedly');
             };
         </script>
     {% endif %}
