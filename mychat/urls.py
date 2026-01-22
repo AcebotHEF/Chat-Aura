@@ -7,5 +7,5 @@ urlpatterns = [
     path('chat/', include('chat.urls')),
     
     # Add this line to redirect the empty path '' to the chat lobby
-    path('', RedirectView.as_view(url='chat/lobby/')), 
+    path('', RedirectView.as_view(url='chat/')), 
 ]
